@@ -1,31 +1,42 @@
-func main() {  
-	requestTimeout :=time.Duration(time.Second * 5)
-	dialTimeout:= time.Duration(time.Second * 5)
+package main
+import (
+        "github.com/nadirhamid/golang-etcd-rate-limiter"
+        "fmt"
+        _ "context"
+        "time"
+        "go.etcd.io/etcd/clientv3"
+)
 
-    ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
-    cli, _ := clientv3.New(clientv3.Config{
+func main() {  
+        //requestTimeout :=time.Duration(time.Second * 5)
+        dialTimeout:= time.Duration(time.Second * 5)
+
+    //_, _ := context.WithTimeout(context.Background(), requestTimeout)
+    cli, err := clientv3.New(clientv3.Config{
+            Username: "root",
+            //Password: "sSbHRXD7cX",
         DialTimeout: dialTimeout,
         Endpoints: []string{"127.0.0.1:2379"},
     })
+
+        if err != nil {
+                fmt.Println(err)
+                return
+        }
     defer cli.Close()
-	key:="some_ip"
-	interval:=time.Duration(time.Second * 5)
-	flushinterval:=time.Duration(time.Second * 30)
-	var limit uint64 = 60
-	limiter := NewRateLimiter(cli, key,limit, interval, flushinterval)
-	limiter.ProcessLimits()
+        key:="some_ip"
+        interval:=time.Duration(time.Second * 5)
+        flushinterval:=time.Duration(time.Second * 30)
+        var limit uint64 = 60
+        rate:= limiter.NewRateLimiter(cli, key,limit, interval, flushinterval)
+        rate.ProcessLimits()
 
 
-	over,err:=limiter.IsOverLimit()
-	if err != nil {
-		return
-	}
-	if over {
-		fmt.Println("rate limit exhausted..")
-	}
-    kv := clientv3.NewKV(cli)
-    pr, _ := kv.Put(ctx, "key", "444")
-    rev := pr.Header.Revision
-    fmt.Println("Revision:", rev)
-    //gr, _ := kv.Get(ctx, "key")
+        over,err:=rate.IsOverLimit()
+        if err != nil {
+                return
+        }
+        if over {
+                fmt.Println("rate limit exhausted..")
+        }
 }
